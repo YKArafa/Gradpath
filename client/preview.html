@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GradPath - UI Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root {
+      --primary-green: #1e4634;
+      --primary-green-hover: #163628;
+      --terracotta: #d05a2b;
+      --text-dark: #1f2937;
+      --text-muted: #6b7280;
+      --border-light: #e5e7eb;
+      --btn-disabled-bg: #c1d7cc;
+      --btn-disabled-text: #4e6b5e;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text-dark);
+      background-color: #f7faf8;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .serif-text { font-family: 'Playfair Display', Georgia, serif; }
+    .page-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(circle at 15% 20%, #f4f8f5 0%, #f9faf8 50%, #edf4ef 100%);
+      padding: 24px 48px;
+    }
+    @media (max-width: 768px) { .page-container { padding: 16px 20px; } }
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 12px 0 24px 0;
+    }
+    .logo {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--primary-green);
+      letter-spacing: -0.5px;
+      cursor: pointer;
+    }
+    .nav-actions { display: flex; align-items: center; gap: 16px; }
+    .nav-link {
+      color: var(--primary-green);
+      background: none;
+      border: none;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 8px 12px;
+    }
+    .btn-primary-pill {
+      background-color: var(--primary-green);
+      color: #ffffff;
+      border: none;
+      border-radius: 9999px;
+      padding: 10px 24px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-primary-pill:hover { background-color: var(--primary-green-hover); }
+    .form-group { display: flex; flex-direction: column; margin-bottom: 20px; }
+    .form-label { font-size: 14px; font-weight: 500; color: #4b5563; margin-bottom: 8px; }
+    .input-wrapper { position: relative; display: flex; align-items: center; }
+    .form-input {
+      width: 100%;
+      padding: 13px 16px;
+      background-color: #ffffff;
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      font-size: 15px;
+      color: var(--text-dark);
+      outline: none;
+    }
+    .form-input:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(30, 70, 52, 0.1); }
+    .form-input::placeholder { color: #9ca3af; }
+    .input-icon-btn {
+      position: absolute;
+      right: 14px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      color: #6b7280;
+    }
+    .btn-submit-full {
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 9999px;
+      font-size: 16px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn-submit-active { background-color: var(--primary-green); color: #ffffff; }
+    .btn-submit-disabled { background-color: var(--btn-disabled-bg); color: var(--btn-disabled-text); cursor: default; }
+    .preview-bar {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(30, 70, 52, 0.95);
+      backdrop-filter: blur(8px);
+      padding: 8px 16px;
+      border-radius: 30px;
+      display: flex;
+      gap: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      z-index: 10000;
+    }
+    .preview-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.25);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .preview-btn.active { background: white; color: var(--primary-green); border-color: white; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const advisorImg = 'public/assets/advisoradvising.png';
+
+    const FIXED_SUBJECT_TYPES = [
+      'Theoretical Computer Science & Math',
+      'Software Engineering & Systems',
+      'AI, Machine Learning & Data Science',
+      'Cybersecurity & Networks',
+      'Databases & Big Data',
+      'Human-Computer Interaction & Media',
+    ];
+
+    function Navbar({ onNavigate, currentPage, user, onLogout }) {
+      const isLoggedIn = !!user;
+      return (
+        <header className="navbar">
+          <div className="logo" onClick={() => onNavigate(isLoggedIn ? 'dashboard' : 'landing')}>GradPath</div>
+          <nav className="nav-actions">
+            {isLoggedIn ? (
+              <>
+                <button className="nav-link" onClick={() => onNavigate(currentPage === 'dashboard' ? 'landing' : 'dashboard')}>
+                  {currentPage === 'dashboard' ? 'Home' : 'Dashboard'}
+                </button>
+                <div style={{ backgroundColor: '#f0f7f3', padding: '6px 14px', borderRadius: '9999px', border: '1px solid #cce3d7', fontSize: '13.5px', color: '#1e4634', fontWeight: 600 }}>
+                  {user.name}
+                </div>
+                <button className="nav-link" onClick={onLogout} style={{ color: '#dc2626', fontWeight: 600 }}>
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                {currentPage !== 'signin' && (
+                  <button className="nav-link" onClick={() => onNavigate('signin')}>Login</button>
+                )}
+                {currentPage !== 'register' && (
+                  <button className="btn-primary-pill" onClick={() => onNavigate('register')}>Sign Up</button>
+                )}
+              </>
+            )}
+          </nav>
+        </header>
+      );
+    }
+
+    function LandingPage({ onNavigate, user, onLogout }) {
+      return (
+        <div className="page-container">
+          <Navbar onNavigate={onNavigate} currentPage="landing" user={user} onLogout={onLogout} />
+          <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', maxWidth: '1240px', width: '100%', margin: '0 auto', padding: '30px 0 60px 0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '48px', alignItems: 'center', width: '100%' }}>
+              <div style={{ maxWidth: '560px' }}>
+                <h1 style={{ fontSize: 'clamp(42px, 5.5vw, 68px)', fontWeight: 800, lineHeight: 1.08, letterSpacing: '-1.5px', color: '#1e4634', marginBottom: '24px' }}>
+                  A clearer<br />
+                  path<br />
+                  <span className="serif-text" style={{ color: '#d05a2b', fontWeight: 700 }}>to graduation.</span>
+                </h1>
+                <p style={{ fontSize: '16.5px', lineHeight: 1.6, color: '#374151', maxWidth: '460px', marginBottom: '40px' }}>
+                  Gradpath recommends the courses each student should take next, helping advisors guide them toward graduation in the best possible time.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+                  {user ? (
+                    <>
+                      <button className="btn-primary-pill" onClick={() => onNavigate('dashboard')} style={{ padding: '16px 36px' }}>
+                        Go to My Dashboard &rarr;
+                      </button>
+                      <button className="nav-link" onClick={onLogout} style={{ border: '1px solid #e5e7eb', borderRadius: '9999px', padding: '12px 24px', color: '#dc2626', fontWeight: 600 }}>
+                        Sign Out
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="btn-primary-pill" onClick={() => onNavigate('register')} style={{ padding: '12px 28px', lineHeight: 1.25, textAlign: 'left' }}>
+                        <span>Get Started as<br />an advisor</span>
+                        <span style={{ fontSize: '18px', marginLeft: '6px' }}>&rarr;</span>
+                      </button>
+                      <button className="btn-primary-pill" onClick={() => onNavigate('signin')} style={{ padding: '16px 36px' }}>
+                        Get Started
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ width: '100%', maxWidth: '580px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 12px 36px rgba(0, 0, 0, 0.04)' }}>
+                  <img src={advisorImg} alt="Advisor advising student" style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain' }} />
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    function SignInPage({ onNavigate, user, onLoginSuccess, onLogout }) {
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [showPassword, setShowPassword] = useState(false);
+      const [rememberMe, setRememberMe] = useState(true);
+
+      return (
+        <div className="page-container" style={{ paddingBottom: '40px' }}>
+          <header style={{ maxWidth: '1240px', width: '100%', margin: '0 auto', padding: '8px 0 24px 0' }}>
+            <div className="logo" onClick={() => onNavigate('landing')}>GradPath</div>
+          </header>
+          <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', maxWidth: '1240px', width: '100%', margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '56px', alignItems: 'center', width: '100%' }}>
+              <div style={{ maxWidth: '440px' }}>
+                <h1 style={{ fontSize: '36px', fontWeight: 800, color: '#111827', marginBottom: '8px', letterSpacing: '-0.5px' }}>Sign In</h1>
+                <p style={{ fontSize: '15px', color: '#6b7280', marginBottom: '32px' }}>
+                  Don't have an account?{' '}
+                  <span onClick={() => onNavigate('register')} style={{ color: '#1e4634', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>Create now</span>
+                </p>
+                <form onSubmit={(e) => { e.preventDefault(); onLoginSuccess({ name: email.split('@')[0], email, institution: 'Stanford University' }); }}>
+                  <div className="form-group">
+                    <label className="form-label">E-mail</label>
+                    <input type="email" className="form-input" placeholder="example@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Password</label>
+                    <div className="input-wrapper">
+                      <input type={showPassword ? 'text' : 'password'} className="form-input" placeholder="@#*%" value={password} onChange={e => setPassword(e.target.value)} required />
+                      <button type="button" className="input-icon-btn" onClick={() => setShowPassword(!showPassword)}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14.5px', color: '#4b5563', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: '#1e4634' }} />
+                      Remember me
+                    </label>
+                  </div>
+                  <button type="submit" className="btn-primary-pill" style={{ width: '100%', padding: '14px 24px', fontSize: '16px', fontWeight: 600, borderRadius: '12px' }}>
+                    Sign in
+                  </button>
+                </form>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ width: '100%', maxWidth: '560px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 12px 36px rgba(0, 0, 0, 0.04)' }}>
+                  <img src={advisorImg} alt="Advisor advising student" style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain' }} />
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    function RegisterPage({ onNavigate, onLoginSuccess }) {
+      const [name, setName] = useState('');
+      const [institution, setInstitution] = useState('');
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [showPassword, setShowPassword] = useState(false);
+
+      const isValid = name && institution && email && password.length >= 8;
+
+      return (
+        <div className="page-container" style={{ justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '40px 20px' }}>
+          <div style={{ width: '100%', maxWidth: '520px', backgroundColor: '#ffffff', borderRadius: '16px', padding: '36px 40px', boxShadow: '0 4px 24px rgba(0, 0, 0, 0.03)', border: '1px solid #eef2f0' }}>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#1e4634', marginBottom: '8px' }}>Create an account</h1>
+              <p style={{ fontSize: '15px', color: '#6b7280' }}>
+                Already have an Account?{' '}
+                <span onClick={() => onNavigate('signin')} style={{ color: '#1e4634', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>Sign In</span>
+              </p>
+            </div>
+            <form onSubmit={e => { e.preventDefault(); onLoginSuccess({ name, institution, email }); }}>
+              <div className="form-group">
+                <label className="form-label">What should we call you?</label>
+                <input type="text" className="form-input" placeholder="Enter your profile name" value={name} onChange={e => setName(e.target.value)} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Institution Name?</label>
+                <input type="text" className="form-input" placeholder="Enter Institution name" value={institution} onChange={e => setInstitution(e.target.value)} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">What's your email?</label>
+                <input type="email" className="form-input" placeholder="Enter your email address" value={email} onChange={e => setEmail(e.target.value)} required />
+              </div>
+              <div className="form-group" style={{ marginBottom: '22px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label className="form-label" style={{ margin: 0 }}>Create a password</label>
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+                    <span>{showPassword ? 'Hide' : 'Show'}</span>
+                  </button>
+                </div>
+                <input type={showPassword ? 'text' : 'password'} className="form-input" placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} required />
+                <span style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px', display: 'block' }}>Use 8 or more characters with a mix of letters, numbers & symbols</span>
+              </div>
+              <p style={{ fontSize: '13px', color: '#374151', lineHeight: 1.5, marginBottom: '20px' }}>
+                By creating an account, you agree to the <span style={{ textDecoration: 'underline' }}>Terms of use</span> and <span style={{ textDecoration: 'underline' }}>Privacy Policy.</span>
+              </p>
+              <button type="submit" className={`btn-submit-full ${isValid ? 'btn-submit-active' : 'btn-submit-disabled'}`}>
+                Create an account
+              </button>
+            </form>
+          </div>
+          <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <button onClick={() => onNavigate('landing')} style={{ background: 'none', border: 'none', color: '#1e4634', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+              &larr; Back to GradPath Home
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    function DashboardPage({ onNavigate, user, onLogout }) {
+      const [studentsList, setStudentsList] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [search, setSearch] = useState('');
+      const [filter, setFilter] = useState('All');
+      const [selectedPlan, setSelectedPlan] = useState(null);
+
+      useEffect(() => {
+        async function fetchAdvisees() {
+          const token = localStorage.getItem('gradpath_token');
+          const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+          try {
+            const res = await fetch('http://localhost:8000/students/my/students', { headers });
+            if (res.ok) {
+              const data = await res.json();
+              const withRisk = await Promise.all(
+                (data || []).map(async (s) => {
+                  try {
+                    const rRes = await fetch(`http://localhost:8000/analysis/general-risk-analysis/${s.id}`, { headers });
+                    if (rRes.ok) {
+                      const analysis = await rRes.json();
+                      const passed = analysis.passed_credits ?? analysis.breakdown?.passed_credits ?? 0;
+                      const degreeTotal = analysis.degree_total_credits || analysis.breakdown?.degree_total_credits || 0;
+                      const majorCredits = analysis.has_major ? (analysis.breakdown?.major_total_credits || 0) : 80;
+                      const totalProgramCredits = analysis.total_program_credits || (degreeTotal + majorCredits);
+                      return {
+                        id: s.id,
+                        name: s.name,
+                        initials: (s.name || 'ST').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase(),
+                        program: s.major_name || s.degree_name || 'Undeclared',
+                        credits: totalProgramCredits > 0 ? `${passed} / ${totalProgramCredits}` : `${passed} CH`,
+                        targetGraduation: analysis.finish_semester || 'N/A',
+                        risk: `${analysis.risk_level} risk`,
+                        riskLevel: analysis.risk_level,
+                        analysis,
+                      };
+                    }
+                  } catch (e) {}
+                  return {
+                    id: s.id,
+                    name: s.name,
+                    initials: (s.name || 'ST').slice(0, 2).toUpperCase(),
+                    program: s.major_name || s.degree_name || 'Undeclared',
+                    credits: '0 CH',
+                    targetGraduation: 'N/A',
+                    risk: 'Low risk',
+                    riskLevel: 'Low',
+                  };
+                })
+              );
+              setStudentsList(withRisk);
+            }
+          } catch (err) {
+            console.warn('Backend load in preview:', err);
+          } finally {
+            setLoading(false);
+          }
+        }
+        fetchAdvisees();
+      }, []);
+
+      const totalCount = studentsList.length;
+      const onTrackCount = studentsList.filter(s => s.riskLevel === 'Low').length;
+      const needAttentionCount = studentsList.filter(s => s.riskLevel === 'Medium').length;
+      const highRiskCount = studentsList.filter(s => s.riskLevel === 'High' || s.riskLevel === 'Critical').length;
+      const onTrackPercent = totalCount > 0 ? Math.round((onTrackCount / totalCount) * 100) : 0;
+
+      const filtered = studentsList.filter(s => {
+        const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.program.toLowerCase().includes(search.toLowerCase());
+        const matchesFilter = filter === 'All' || s.riskLevel === filter || s.risk === filter;
+        return matchesSearch && matchesFilter;
+      });
+
+      return (
+        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7f5' }}>
+          {/* Left Sidebar (Image 1) */}
+          <aside style={{ width: '240px', backgroundColor: '#1f2937', color: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px 0', flexShrink: 0 }}>
+            <div>
+              <div style={{ padding: '0 24px 28px 24px', fontSize: '24px', fontWeight: 800, color: '#10b981' }}>GradPath</div>
+              <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <button style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 24px', width: '100%', border: 'none', background: '#166534', color: '#ffffff', fontSize: '14.5px', fontWeight: 600, cursor: 'pointer' }}>
+                  <span>Dashboard</span>
+                </button>
+                <button style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 24px', width: '100%', border: 'none', background: 'transparent', color: '#94a3b8', fontSize: '14.5px', cursor: 'pointer' }}>
+                  <span>What-if Simulator</span>
+                </button>
+                <button style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 24px', width: '100%', border: 'none', background: 'transparent', color: '#94a3b8', fontSize: '14.5px', cursor: 'pointer' }}>
+                  <span>Recommendation</span>
+                </button>
+                <button style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 24px', width: '100%', border: 'none', background: 'transparent', color: '#94a3b8', fontSize: '14.5px', cursor: 'pointer' }}>
+                  <span>Profile</span>
+                </button>
+              </nav>
+            </div>
+            <div style={{ borderTop: '1px solid #334155', paddingTop: '16px' }}>
+              <button onClick={() => onNavigate('landing')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 24px', width: '100%', border: 'none', background: 'transparent', color: '#94a3b8', fontSize: '14px', cursor: 'pointer' }}>
+                <span>Home</span>
+              </button>
+              <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 24px', width: '100%', border: 'none', background: 'transparent', color: '#f87171', fontSize: '14px', cursor: 'pointer' }}>
+                <span>Logout</span>
+              </button>
+            </div>
+          </aside>
+
+          {/* Main Area */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <header style={{ height: '68px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '0 40px', gap: '24px' }}>
+              <span onClick={() => onNavigate('landing')} style={{ cursor: 'pointer', fontSize: '14px', color: '#4b5563' }}>Home</span>
+              <span style={{ fontSize: '14px', color: '#166534', fontWeight: 700 }}>Dashboard</span>
+              <div style={{ position: 'relative' }}>
+                <span style={{ fontSize: '18px' }}>🔔</span>
+                {highRiskCount > 0 && (
+                  <span style={{ position: 'absolute', top: '-4px', right: '-6px', background: '#ef4444', color: 'white', borderRadius: '50%', fontSize: '10px', padding: '2px 5px', fontWeight: 700 }}>{highRiskCount}</span>
+                )}
+              </div>
+              <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'white', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</div>
+            </header>
+
+            <div style={{ padding: '0 40px 48px 40px', overflowY: 'auto' }}>
+              {/* Welcome Card */}
+              <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '32px 36px', border: '1px solid #eef2f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+                <div>
+                  <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>Welcome back, {user?.name ? user.name.split(' ')[0] : 'Advisor'}</h1>
+                  <p style={{ fontSize: '15px', color: '#374151', marginBottom: '24px' }}>Advise Another Student?</p>
+                  <button onClick={() => onNavigate('add-student')} style={{ backgroundColor: '#1e4634', color: '#ffffff', border: 'none', borderRadius: '9999px', padding: '12px 28px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}>
+                    Add Student
+                  </button>
+                </div>
+                <div style={{ width: '180px', height: '120px', background: '#fef3c7', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px' }}>
+                  📚🌱
+                </div>
+              </div>
+
+              {/* Stats Grid - 100% dynamic */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px 24px', border: '1px solid #eef2f0' }}>
+                  <div style={{ fontSize: '13.5px', color: '#4b5563' }}>Total students</div>
+                  <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827' }}>{loading ? '...' : totalCount}</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280' }}>Currently advising</div>
+                </div>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px 24px', border: '1px solid #eef2f0' }}>
+                  <div style={{ fontSize: '13.5px', color: '#4b5563' }}>On track</div>
+                  <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827' }}>{loading ? '...' : onTrackCount}</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280' }}>{totalCount > 0 ? `${onTrackPercent}% of students` : '0% of students'}</div>
+                </div>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px 24px', border: '1px solid #eef2f0' }}>
+                  <div style={{ fontSize: '13.5px', color: '#4b5563' }}>Need attention</div>
+                  <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827' }}>{loading ? '...' : needAttentionCount}</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280' }}>Medium risk</div>
+                </div>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px 24px', border: '1px solid #eef2f0' }}>
+                  <div style={{ fontSize: '13.5px', color: '#4b5563' }}>At high risk</div>
+                  <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827' }}>{loading ? '...' : highRiskCount}</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280' }}>Review recommended</div>
+                </div>
+              </div>
+
+              {/* Students Table */}
+              <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '28px', border: '1px solid #eef2f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <div>
+                    <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#111827' }}>My students</h2>
+                    <span style={{ fontSize: '13.5px', color: '#6b7280' }}>{filtered.length} {filtered.length === 1 ? 'student' : 'students'} shown</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <input type="text" placeholder="Search students" value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #e5e7eb', fontSize: '13.5px' }} />
+                    <select value={filter} onChange={e => setFilter(e.target.value)} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #e5e7eb', fontSize: '13.5px' }}>
+                      <option value="All">All Risks</option>
+                      <option value="Low">Low risk</option>
+                      <option value="Medium">Medium risk</option>
+                      <option value="High">High risk</option>
+                      <option value="Critical">Critical risk</option>
+                    </select>
+                  </div>
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #f1f5f9', fontSize: '12px', fontWeight: 700, color: '#94a3b8' }}>
+                      <th style={{ padding: '14px' }}>STUDENT</th>
+                      <th style={{ padding: '14px' }}>PROGRAM</th>
+                      <th style={{ padding: '14px' }}>CREDITS</th>
+                      <th style={{ padding: '14px' }}>TARGET GRADUATION</th>
+                      <th style={{ padding: '14px' }}>GRADUATION RISK</th>
+                      <th style={{ padding: '14px', textAlign: 'right' }}>ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr><td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>Calculating graduation risk from backend...</td></tr>
+                    ) : filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '40px 20px', textAlign: 'center' }}>
+                          <p style={{ color: '#4b5563', fontWeight: 600, marginBottom: '8px' }}>
+                            {studentsList.length === 0 ? 'No students registered yet' : 'No students found'}
+                          </p>
+                          {studentsList.length === 0 && (
+                            <button onClick={() => onNavigate('add-student')} style={{ background: '#1e4634', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '9999px', cursor: 'pointer', fontSize: '13px' }}>
+                              + Add Student
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ) : (
+                      filtered.map(s => (
+                        <tr key={s.id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                          <td style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px' }}>{s.initials}</div>
+                            <span style={{ fontWeight: 600 }}>{s.name}</span>
+                          </td>
+                          <td style={{ padding: '16px', color: '#4b5563' }}>{s.program}</td>
+                          <td style={{ padding: '16px', fontWeight: 600 }}>{s.credits}</td>
+                          <td style={{ padding: '16px', color: '#4b5563' }}>{s.targetGraduation}</td>
+                          <td style={{ padding: '16px' }}>
+                            <span style={{ padding: '4px 12px', borderRadius: '9999px', fontSize: '12px', fontWeight: 600, background: s.riskLevel === 'Low' ? '#eaf8ef' : s.riskLevel === 'Medium' ? '#fef3c7' : '#fee2e2', color: s.riskLevel === 'Low' ? '#166534' : s.riskLevel === 'Medium' ? '#92400e' : '#b91c1c' }}>
+                              {s.risk}
+                            </span>
+                          </td>
+                          <td style={{ padding: '16px', textAlign: 'right' }}>
+                            <button onClick={() => setSelectedPlan(s)} style={{ background: 'none', border: 'none', color: '#1e4634', fontWeight: 600, cursor: 'pointer' }}>View plan &rarr;</button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {selectedPlan && (
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+              <div style={{ background: 'white', borderRadius: '20px', padding: '32px', maxWidth: '520px', width: '100%' }}>
+                <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#1e4634' }}>{selectedPlan.name}</h3>
+                <p style={{ color: '#6b7280', marginBottom: '16px' }}>{selectedPlan.program} &bull; {selectedPlan.targetGraduation}</p>
+                <div style={{ padding: '16px', background: '#f0fdf4', borderRadius: '12px', marginBottom: '20px' }}>
+                  <div style={{ fontWeight: 600, color: '#166534' }}>Risk Level: {selectedPlan.risk}</div>
+                  <div style={{ marginTop: '4px', fontSize: '14px' }}>Credits: {selectedPlan.credits}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <button onClick={() => setSelectedPlan(null)} style={{ background: '#1e4634', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '9999px', cursor: 'pointer' }}>Close</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function AddStudentPage({ onNavigate }) {
+      const [name, setName] = useState('');
+      const [email, setEmail] = useState('');
+      const [date, setDate] = useState('');
+      const [institution, setInstitution] = useState('');
+      const [degrees, setDegrees] = useState([]);
+      const [majors, setMajors] = useState([]);
+      const [degreeId, setDegreeId] = useState('');
+      const [majorId, setMajorId] = useState('');
+      const [selectedPills, setSelectedPills] = useState(['Theoretical Computer Science & Math', 'Software Engineering & Systems']);
+
+      useEffect(() => {
+        const token = localStorage.getItem('gradpath_token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        fetch('http://localhost:8000/transcripts/degrees', { headers })
+          .then(res => res.ok ? res.json() : [])
+          .then(data => setDegrees(data || []))
+          .catch(() => setDegrees([]));
+
+        fetch('http://localhost:8000/transcripts/majors', { headers })
+          .then(res => res.ok ? res.json() : [])
+          .then(data => setMajors(data || []))
+          .catch(() => setMajors([]));
+      }, []);
+
+      const filteredMajors = degreeId 
+        ? majors.filter(m => Number(m.degree_id) === Number(degreeId))
+        : [];
+
+      const handleDegreeChange = (id) => {
+        setDegreeId(id);
+        setMajorId('');
+      };
+
+      const togglePill = (pill) => {
+        if (selectedPills.includes(pill)) {
+          setSelectedPills(selectedPills.filter(p => p !== pill));
+        } else {
+          setSelectedPills([...selectedPills, pill]);
+        }
+      };
+
+      return (
+        <div style={{ minHeight: '100vh', backgroundColor: '#f7faf8', padding: '24px 32px 60px 32px' }}>
+          <header style={{ maxWidth: '600px', margin: '0 auto 20px auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div onClick={() => onNavigate('dashboard')} style={{ fontSize: '26px', fontWeight: 800, color: '#1e4634', cursor: 'pointer' }}>Grad Path</div>
+            <button onClick={() => onNavigate('dashboard')} style={{ background: 'none', border: 'none', color: '#1e4634', fontWeight: 600, cursor: 'pointer' }}>&larr; Back to Dashboard</button>
+          </header>
+          <main style={{ maxWidth: '580px', margin: '0 auto' }}>
+            <h1 style={{ textAlign: 'center', fontSize: '28px', fontWeight: 800, color: '#1e4634', marginBottom: '32px' }}>Add Student</h1>
+            <form onSubmit={e => { e.preventDefault(); alert(`Added student: ${name}`); onNavigate('dashboard'); }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '13.5px', color: '#4b5563', marginBottom: '6px' }}>Name</label>
+                <input type="text" placeholder="Student's name..." value={name} onChange={e => setName(e.target.value)} required style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '13.5px', color: '#4b5563', marginBottom: '6px' }}>email:</label>
+                <input type="email" placeholder="Student's email..." value={email} onChange={e => setEmail(e.target.value)} required style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '13.5px', color: '#4b5563', marginBottom: '6px' }}>Date of enrollment:</label>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '13.5px', color: '#4b5563', marginBottom: '6px' }}>Institution:</label>
+                <input type="text" placeholder="university name..." value={institution} onChange={e => setInstitution(e.target.value)} style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '13.5px', color: '#4b5563', marginBottom: '6px' }}>Degree:</label>
+                <select value={degreeId} onChange={e => handleDegreeChange(e.target.value)} required style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                  <option value="" disabled>Select Degree...</option>
+                  {degrees.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '13.5px', color: '#4b5563', marginBottom: '6px' }}>Major (Optional):</label>
+                <select value={majorId} onChange={e => setMajorId(e.target.value)} disabled={!degreeId} style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: !degreeId ? '#f9fafb' : '#fff' }}>
+                  {!degreeId ? (
+                    <option value="">Select a degree first...</option>
+                  ) : filteredMajors.length === 0 ? (
+                    <option value="">No majors for this degree (undeclared)</option>
+                  ) : (
+                    <>
+                      <option value="">Select Major (or leave empty)...</option>
+                      {filteredMajors.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <span style={{ fontSize: '12px', color: '#9ca3af' }}>{degreeId ? 'Only majors for the selected degree are shown.' : 'Select degree above.'}</span>
+              </div>
+
+              {/* Student Preferences Section */}
+              <div style={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '20px', marginBottom: '28px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e4634', marginBottom: '12px' }}>🎯 Student Preferences (Fixed List)</h3>
+                <label style={{ display: 'block', fontSize: '13px', color: '#374151', marginBottom: '8px', fontWeight: 600 }}>Preferred Subject Types:</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                  {FIXED_SUBJECT_TYPES.map(pill => {
+                    const active = selectedPills.includes(pill);
+                    return (
+                      <button key={pill} type="button" onClick={() => togglePill(pill)} style={{ padding: '6px 14px', borderRadius: '9999px', fontSize: '12px', border: active ? '1px solid #1e4634' : '1px solid #e5e7eb', background: active ? '#eef5f1' : '#ffffff', color: active ? '#1e4634' : '#6b7280', cursor: 'pointer' }}>
+                        {active ? '✓ ' : '+ '} {pill}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: '13px', color: '#374151', fontWeight: 600, marginBottom: '6px' }}>Pace: Standard (30 credits / semester)</div>
+                <div style={{ fontSize: '13px', color: '#374151', fontWeight: 600 }}>Target: Spring 2028</div>
+              </div>
+
+              <button type="submit" style={{ width: '100%', padding: '14px', borderRadius: '9999px', fontSize: '16px', fontWeight: 600, border: 'none', background: '#1e4634', color: 'white', cursor: 'pointer' }}>
+                Add
+              </button>
+            </form>
+          </main>
+        </div>
+      );
+    }
+
+    function App() {
+      const [page, setPage] = useState('dashboard');
+      const [user, setUser] = useState({ name: 'Yahya', email: 'yahya@univ.edu', institution: 'University of Engineering' });
+
+      const handleLoginSuccess = (userData) => {
+        setUser(userData);
+        setPage('dashboard');
+      };
+
+      const handleLogout = () => {
+        setUser(null);
+        setPage('landing');
+      };
+
+      return (
+        <div>
+          {page === 'landing' && <LandingPage onNavigate={setPage} user={user} onLogout={handleLogout} />}
+          {page === 'signin' && <SignInPage onNavigate={setPage} user={user} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />}
+          {page === 'register' && <RegisterPage onNavigate={setPage} user={user} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />}
+          {page === 'dashboard' && <DashboardPage onNavigate={setPage} user={user} onLogout={handleLogout} />}
+          {page === 'add-student' && <AddStudentPage onNavigate={setPage} user={user} />}
+
+          <div className="preview-bar">
+            <button className={`preview-btn ${page === 'landing' ? 'active' : ''}`} onClick={() => setPage('landing')}>Landing</button>
+            <button className={`preview-btn ${page === 'signin' ? 'active' : ''}`} onClick={() => setPage('signin')}>Sign In</button>
+            <button className={`preview-btn ${page === 'register' ? 'active' : ''}`} onClick={() => setPage('register')}>Register</button>
+            <button className={`preview-btn ${page === 'dashboard' ? 'active' : ''}`} onClick={() => setPage('dashboard')}>Dashboard (Image 1)</button>
+            <button className={`preview-btn ${page === 'add-student' ? 'active' : ''}`} onClick={() => setPage('add-student')}>Add Student (Image 2)</button>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
